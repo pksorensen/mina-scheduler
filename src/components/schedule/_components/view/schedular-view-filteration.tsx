@@ -132,7 +132,21 @@ export default function SchedulerViewFilteration({
   // Calculate grid columns based on available views
   const getGridCols = () => {
     const count = viewsSelector?.length || 3;
-    return `grid-cols-${Math.min(count, 4)}`;
+    const actualCount = Math.min(count, 4);
+
+    // Use static class names that Tailwind can detect
+    switch (actualCount) {
+      case 1:
+        return "grid-cols-1";
+      case 2:
+        return "grid-cols-2";
+      case 3:
+        return "grid-cols-3";
+      case 4:
+        return "grid-cols-4";
+      default:
+        return "grid-cols-3";
+    }
   };
 
   return (

@@ -2,8 +2,10 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
 
+const DEFAULT_MIN_WITH = 400; // Default minimum width for the timeline
 export interface Booking {
   start: string | Date;
   end: string | Date;
@@ -33,14 +35,20 @@ export default function CarScheduleTimeline({
 
   // Resource column multiplier (2x, 3x, 4x, etc. of time column width)
   const [resourceColumnMultiplier, setResourceColumnMultiplier] = useState(2);
+  const [zoom, setZoom] = useState(1);
 
   // Total columns = resource columns + 24 time columns
   const totalColumns = resourceColumnMultiplier + 24;
 
+  const [interval, setInterval] = useState<
+    "hour" | "half-hour" | "quarter-hour"
+  >("hour"); // Define the interval for time slots
+  // For simplicity, we assume 1 hour intervals here
+
   // Show all 24 hours but allow horizontal scrolling
   const hours = Array.from({ length: 24 }, (_, i) => i);
 
-  const formatHour = (h: number) => `${h.toString().padStart(2, "0")}:00`;
+  const formatTime = (h: number) => `${h.toString().padStart(2, "0")}:00`;
 
   const getOffsetPercent = (date: Date) => {
     const minutes = date.getHours() * 60 + date.getMinutes();
@@ -51,9 +59,41 @@ export default function CarScheduleTimeline({
     const diff = (end.getTime() - start.getTime()) / 60000; // minutes
     return (diff / (24 * 60)) * 100;
   };
+  const minColumnWidth = 50;
+  const [columnWidth, setcolumnWidth] = useState(
+    ((containerRef.current?.scrollWidth ?? DEFAULT_MIN_WITH) / totalColumns) * 3
+  );
 
-  const columnWidth =
-    ((containerRef.current?.scrollWidth ?? 1200) / totalColumns) * 3;
+  useEffect(() => {
+    const handleResize = () => {
+      if (containerRef.current) {
+        const newWidth =
+          (containerRef.current.scrollWidth * zoom) / totalColumns;
+
+        console.log("=== RESIZE DEBUG ===");
+        console.log(
+          "containerRef.current.scrollWidth:",
+          containerRef.current.scrollWidth
+        );
+        console.log("totalColumns:", totalColumns);
+        console.log("resourceColumnMultiplier:", resourceColumnMultiplier);
+        console.log("zoom:", zoom);
+        console.log("minColumnWidth:", minColumnWidth);
+        console.log("newWidth:", newWidth);
+        console.log("======================");
+        // Calculate new column width based on container width and total columns
+
+        setcolumnWidth(newWidth);
+      }
+    };
+
+    // Initial width calculation
+    handleResize();
+
+    // Update width on window resize
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [resourceColumnMultiplier, totalColumns, zoom]);
 
   // Function to scroll to a specific hour
   const scrollToHour = (hour: number) => {
@@ -63,7 +103,7 @@ export default function CarScheduleTimeline({
       const columnWidth = totalContentWidth / totalColumns;
 
       // Hour columns start after resource columns
-      const hourColumnIndex = resourceColumnMultiplier + hour;
+      const hourColumnIndex = hour;
       const scrollPosition = hourColumnIndex * columnWidth;
 
       console.log("=== SCROLL TO HOUR DEBUG ===");
@@ -235,7 +275,7 @@ export default function CarScheduleTimeline({
           <span className="text-sm text-muted-foreground">
             Resource column width: {resourceColumnMultiplier}x
           </span>
-          {[2, 3, 4, 5, 6].map((multiplier) => (
+          {[1, 2, 3, 4, 5, 6].map((multiplier) => (
             <Button
               key={multiplier}
               variant={
@@ -253,6 +293,25 @@ export default function CarScheduleTimeline({
           <span className="text-xs text-muted-foreground ml-2">
             (Drag to resize)
           </span>
+        </div>
+      </div>
+
+      {/* Zoom Control */}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">Zoom: {zoom}x</span>
+          <div className="flex items-center gap-2 w-48">
+            <span className="text-xs text-muted-foreground">1x</span>
+            <Slider
+              value={[zoom]}
+              onValueChange={(values) => setZoom(values[0])}
+              min={1}
+              max={10}
+              step={1}
+              className="flex-1"
+            />
+            <span className="text-xs text-muted-foreground">10x</span>
+          </div>
         </div>
       </div>
 
@@ -308,10 +367,10 @@ export default function CarScheduleTimeline({
           <div
             className="grid sticky top-0 z-30 bg-background border-b"
             style={{
-              gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${columnWidth}px, 1fr)) repeat(24, ${columnWidth}px)`,
-              minWidth: `${
-                resourceColumnMultiplier * columnWidth + 24 * columnWidth
-              }px`,
+              gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(24, minmax(${minColumnWidth}px, 1fr))`,
+              minWidth: `calc(max(${100 * zoom}%, ${
+                minColumnWidth * totalColumns
+              }px))`,
             }}
           >
             {/* Empty resource columns for grid structure */}
@@ -330,7 +389,7 @@ export default function CarScheduleTimeline({
                 className="text-center border-r px-1 py-2 h-10 flex items-center justify-center text-xs"
                 style={{ scrollSnapAlign: "start" }}
               >
-                {formatHour(h)}
+                {formatTime(h)}
               </div>
             ))}
           </div>
@@ -340,10 +399,10 @@ export default function CarScheduleTimeline({
               key={car.carId}
               className="grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
               style={{
-                gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${columnWidth}px, 1fr)) repeat(24, ${columnWidth}px)`,
-                minWidth: `${
-                  resourceColumnMultiplier * columnWidth + 24 * columnWidth
-                }px`,
+                gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(24, minmax(${minColumnWidth}px, 1fr))`,
+                minWidth: `calc(max(${100 * zoom}%, ${
+                  minColumnWidth * totalColumns
+                }px))`,
               }}
             >
               {/* Empty resource columns for grid structure */}
@@ -404,7 +463,9 @@ export default function CarScheduleTimeline({
         <div
           className="absolute top-0 left-0 pointer-events-none"
           style={{
-            width: `${columnWidth * resourceColumnMultiplier}px`,
+            width: `calc(max(${columnWidth * resourceColumnMultiplier}px, ${
+              minColumnWidth * resourceColumnMultiplier
+            }px))`,
             height: "100%",
           }}
         >
