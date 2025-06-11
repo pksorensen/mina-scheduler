@@ -8,6 +8,7 @@ Welcome to the **Mina Scheduler Library**, a customizable and flexible calendar 
 - **Event Management:** Add, update, and delete events with built-in form validation.
 - **Customizable UI:** Easily customize the look and feel of the calendar, including buttons, tabs, and event modals.
 - **Mobile-Friendly:** Responsive design optimized for mobile devices.
+- **Car Timeline View:** Visualize bookings per car across the hours of a day.
 - **Framer Motion Animations:** Smooth transitions between views.
 - **Zod Validation:** Schema validation for ensuring valid event data.
 - **Shadcn UI Integration:** Leverages Shadcn UI for a seamless user interface.
@@ -516,6 +517,24 @@ export interface ViewClassNames {
   monthView?: string;
 }
 ```
+### CarScheduleTimeline
+
+The `CarScheduleTimeline` component shows car bookings across the day with each car on its own row.
+
+```tsx
+import CarScheduleTimeline from "mina-scheduler/dist/..."; // adjust path as needed
+
+const data = [{
+  carId: "car-1",
+  name: "Car 1",
+  bookings: [
+    { start: "2025-06-10T08:30:00", end: "2025-06-10T10:00:00", user: "Alice" }
+  ]
+}];
+
+<CarScheduleTimeline data={data} />
+```
+
 
 ## License
 

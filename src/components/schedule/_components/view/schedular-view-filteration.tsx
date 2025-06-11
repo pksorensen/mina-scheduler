@@ -11,6 +11,7 @@ import AddEventModal from "../../_modals/add-event-modal";
 import DailyView from "./day/daily-view";
 import MonthView from "./month/month-view";
 import WeeklyView from "./week/week-view";
+import CarScheduleTimeline from "./timeline/car-schedule-timeline";
 import { useModal } from "@/providers/modal-context";
 import { ClassNames, CustomComponents, Views } from "@/types/index";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,7 @@ const animationConfig = {
 
 export default function SchedulerViewFilteration({
   views = {
-    views: ["day", "week", "month"],
+    views: ["day", "week", "month", "timeline"],
     mobileViews: ["day"],
   },
   stopDayEventSummary = false,
@@ -134,7 +135,7 @@ export default function SchedulerViewFilteration({
             className={cn("w-full", classNames?.tabs)}
           >
             <div className="flex justify-between items-center mb-4">
-              <TabsList className="grid grid-cols-3">
+              <TabsList className="grid grid-cols-4">
                 {viewsSelector?.includes("day") && (
                   <TabsTrigger value="day">
                     {CustomComponents?.customTabs?.CustomDayTab ? (
@@ -171,6 +172,13 @@ export default function SchedulerViewFilteration({
                         <span>Month</span>
                       </div>
                     )}
+                  </TabsTrigger>
+                )}
+                {viewsSelector?.includes("timeline") && (
+                  <TabsTrigger value="timeline">
+                    <div className="flex items-center space-x-2">
+                      <span>Timeline</span>
+                    </div>
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -256,6 +264,11 @@ export default function SchedulerViewFilteration({
                     />
                   </motion.div>
                 </AnimatePresence>
+              </TabsContent>
+              )}
+            {viewsSelector?.includes("timeline") && (
+              <TabsContent value="timeline">
+                <CarScheduleTimeline data={[]} />
               </TabsContent>
             )}
           </Tabs>
