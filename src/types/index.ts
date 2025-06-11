@@ -29,17 +29,14 @@ export type Action =
   | { type: "UPDATE_EVENT"; payload: Event }
   | { type: "SET_EVENTS"; payload: Event[] };
 
-
-  
-
 // Define handlers interface
 export interface Handlers {
   handleEventStyling: (
     event: Event,
     dayEvents: Event[],
-    periodOptions?: { 
-      eventsInSamePeriod?: number; 
-      periodIndex?: number; 
+    periodOptions?: {
+      eventsInSamePeriod?: number;
+      periodIndex?: number;
       adjustForPeriod?: boolean;
     }
   ) => {
@@ -124,6 +121,7 @@ export interface CustomComponents {
     CustomDayTab?: React.ReactNode;
     CustomWeekTab?: React.ReactNode;
     CustomMonthTab?: React.ReactNode;
+    CustomTimelineTab?: React.ReactNode;
   };
   CustomEventComponent?: React.FC<Event>; // Using custom event type
   CustomEventModal?: CustomEventModal;

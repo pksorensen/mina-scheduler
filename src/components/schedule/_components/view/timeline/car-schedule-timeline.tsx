@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, GripVertical } from "lucide-react";
 
 export interface Booking {
   start: string | Date;
@@ -26,6 +26,9 @@ export default function CarScheduleTimeline({
 }: CarScheduleTimelineProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const dragStartXRef = useRef(0);
+  const dragStartMultiplierRef = useRef(0);
 
   // Resource column multiplier (2x, 3x, 4x, etc. of time column width)
   const [resourceColumnMultiplier, setResourceColumnMultiplier] = useState(3);
@@ -128,7 +131,82 @@ export default function CarScheduleTimeline({
     }
   };
 
- 
+  // Drag handle functions for resizing resource column
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      isDraggingRef.current = true;
+      dragStartXRef.current = e.clientX;
+      dragStartMultiplierRef.current = resourceColumnMultiplier;
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    [resourceColumnMultiplier]
+  );
+
+  // Debounce utility
+  function debounce<T extends (...args: any[]) => void>(fn: T, delay: number) {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    return (...args: Parameters<T>) => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  // Debounced setter for resourceColumnMultiplier
+  const debouncedSetResourceColumnMultiplier = useRef(
+    debounce((value: number) => {
+      setResourceColumnMultiplier((old) => (old !== value ? value : old));
+    }, 16) // ~60fps
+  ).current;
+
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isDraggingRef.current || !scrollContainerRef.current) return;
+      const deltaX = e.clientX - dragStartXRef.current;
+      const width = scrollContainerRef.current.scrollWidth / totalColumns;
+      const deltaMultiplier =
+        deltaX > 0 ? Math.floor(deltaX / width) : Math.ceil(deltaX / width); // 47px is approx width of one column
+      console.log(
+        "Delta",
+        deltaMultiplier,
+        deltaX,
+        width,
+        deltaX / width,
+        dragStartMultiplierRef.current,
+        dragStartMultiplierRef.current + deltaMultiplier
+      );
+      const newMultiplier = Math.max(
+        2,
+        Math.min(8, dragStartMultiplierRef.current + deltaMultiplier)
+      );
+
+      debouncedSetResourceColumnMultiplier(newMultiplier);
+    },
+    [debouncedSetResourceColumnMultiplier, totalColumns]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    isDraggingRef.current = false;
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", handleMouseUp);
+
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+
+    // Snap to nearest whole number when dragging ends
+    const finalMultiplier = Math.max(
+      2,
+      Math.min(8, Math.round(resourceColumnMultiplier))
+    );
+    if (finalMultiplier !== resourceColumnMultiplier) {
+      setResourceColumnMultiplier(finalMultiplier);
+    }
+  }, [resourceColumnMultiplier, handleMouseMove]);
+
   // Show a message if no data is provided
   if (!data || data.length === 0) {
     return (
@@ -151,13 +229,15 @@ export default function CarScheduleTimeline({
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            Resource column width:
+            Resource column width: {resourceColumnMultiplier}x
           </span>
-          {[2, 3, 4, 5].map((multiplier) => (
+          {[2, 3, 4, 5, 6].map((multiplier) => (
             <Button
               key={multiplier}
               variant={
-                resourceColumnMultiplier === multiplier ? "default" : "outline"
+                Math.round(resourceColumnMultiplier) === multiplier
+                  ? "default"
+                  : "outline"
               }
               size="sm"
               onClick={() => setResourceColumnMultiplier(multiplier)}
@@ -166,6 +246,9 @@ export default function CarScheduleTimeline({
               {multiplier}x
             </Button>
           ))}
+          <span className="text-xs text-muted-foreground ml-2">
+            (Drag to resize)
+          </span>
         </div>
       </div>
 
@@ -314,7 +397,11 @@ export default function CarScheduleTimeline({
         <div
           className="absolute top-0 left-0 pointer-events-none"
           style={{
-            width: `calc(1200px / ${totalColumns} * ${resourceColumnMultiplier})`,
+            width: `${
+              ((scrollContainerRef.current?.scrollWidth ?? 1200) /
+                totalColumns) *
+              resourceColumnMultiplier
+            }px`,
             height: "100%",
           }}
         >
@@ -332,6 +419,18 @@ export default function CarScheduleTimeline({
               {car.name}
             </div>
           ))}
+
+          {/* Drag Handle for Resizing */}
+          <div
+            className="absolute top-0 right-0 w-1 h-full bg-transparent hover:bg-blue-300 cursor-col-resize z-50 pointer-events-auto transition-colors"
+            onMouseDown={handleMouseDown}
+            title="Drag to resize resource column"
+          >
+            {/* Visible drag indicator */}
+            <div className="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-1/2">
+              <GripVertical className="h-4 w-4 text-gray-400 hover:text-blue-500 transition-colors" />
+            </div>
+          </div>
         </div>
       </div>
     </div>

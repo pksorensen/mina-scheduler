@@ -32,7 +32,7 @@ const animationConfig = {
 export default function SchedulerViewFilteration({
   views = {
     views: ["day", "week", "month", "timeline"],
-    mobileViews: ["day"],
+    mobileViews: ["day", "timeline"],
   },
   stopDayEventSummary = false,
   CustomComponents,
