@@ -12,7 +12,8 @@
         "esbenp.prettier-vscode",
         "ms-vscode.vscode-typescript-next",
         "formulahendry.auto-rename-tag",
-        "ms-vscode.vscode-json"
+        "ms-vscode.vscode-json",
+        "github.copilot"
       ],
       "settings": {
         "editor.formatOnSave": true,
