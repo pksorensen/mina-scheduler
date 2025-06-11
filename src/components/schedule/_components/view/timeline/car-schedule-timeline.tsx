@@ -25,13 +25,14 @@ export default function CarScheduleTimeline({
   data,
 }: CarScheduleTimelineProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isScrollingRef = useRef(false);
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragStartMultiplierRef = useRef(0);
 
   // Resource column multiplier (2x, 3x, 4x, etc. of time column width)
-  const [resourceColumnMultiplier, setResourceColumnMultiplier] = useState(3);
+  const [resourceColumnMultiplier, setResourceColumnMultiplier] = useState(2);
 
   // Total columns = resource columns + 24 time columns
   const totalColumns = resourceColumnMultiplier + 24;
@@ -50,6 +51,9 @@ export default function CarScheduleTimeline({
     const diff = (end.getTime() - start.getTime()) / 60000; // minutes
     return (diff / (24 * 60)) * 100;
   };
+
+  const columnWidth =
+    ((containerRef.current?.scrollWidth ?? 1200) / totalColumns) * 3;
 
   // Function to scroll to a specific hour
   const scrollToHour = (hour: number) => {
@@ -294,10 +298,7 @@ export default function CarScheduleTimeline({
         </div>
       </div>
 
-      <div
-        className="w-full relative"
-        style={{ scrollSnapType: "x mandatory" }}
-      >
+      <div className="w-full relative" ref={containerRef}>
         <div
           ref={scrollContainerRef}
           className="relative overflow-x-auto"
@@ -305,9 +306,12 @@ export default function CarScheduleTimeline({
         >
           {/* Header */}
           <div
-            className="min-w-[1200px] grid sticky top-0 z-30 bg-background border-b"
+            className="grid sticky top-0 z-30 bg-background border-b"
             style={{
-              gridTemplateColumns: `repeat(${totalColumns}, 1fr)`,
+              gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${columnWidth}px, 1fr)) repeat(24, ${columnWidth}px)`,
+              minWidth: `${
+                resourceColumnMultiplier * columnWidth + 24 * columnWidth
+              }px`,
             }}
           >
             {/* Empty resource columns for grid structure */}
@@ -334,9 +338,12 @@ export default function CarScheduleTimeline({
           {data.map((car) => (
             <div
               key={car.carId}
-              className="min-w-[1200px] grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
+              className="grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
               style={{
-                gridTemplateColumns: `repeat(${totalColumns}, 1fr)`,
+                gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${columnWidth}px, 1fr)) repeat(24, ${columnWidth}px)`,
+                minWidth: `${
+                  resourceColumnMultiplier * columnWidth + 24 * columnWidth
+                }px`,
               }}
             >
               {/* Empty resource columns for grid structure */}
@@ -397,11 +404,7 @@ export default function CarScheduleTimeline({
         <div
           className="absolute top-0 left-0 pointer-events-none"
           style={{
-            width: `${
-              ((scrollContainerRef.current?.scrollWidth ?? 1200) /
-                totalColumns) *
-              resourceColumnMultiplier
-            }px`,
+            width: `${columnWidth * resourceColumnMultiplier}px`,
             height: "100%",
           }}
         >
