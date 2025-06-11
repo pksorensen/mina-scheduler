@@ -128,7 +128,6 @@ export default function CarScheduleTimeline({
     }
   };
 
- 
   // Show a message if no data is provided
   if (!data || data.length === 0) {
     return (
@@ -212,28 +211,21 @@ export default function CarScheduleTimeline({
       </div>
 
       <div
-        className="w-full relative"
+        ref={scrollContainerRef}
+        className="overflow-x-auto w-full relative"
         style={{ scrollSnapType: "x mandatory" }}
       >
-        <div
-          ref={scrollContainerRef}
-          className="relative overflow-x-auto"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
+        <div className="min-w-[1200px]">
           {/* Header */}
           <div
-            className="min-w-[1200px] grid sticky top-0 z-30 bg-background border-b"
+            className="grid sticky top-0 z-30 bg-background border-b"
             style={{
               gridTemplateColumns: `repeat(${totalColumns}, 1fr)`,
             }}
           >
             {/* Empty resource columns for grid structure */}
             {Array.from({ length: resourceColumnMultiplier }).map((_, i) => (
-              <div
-                key={`empty-header-${i}`}
-                className="border-r h-10"
-                style={{ scrollSnapAlign: "start" }}
-              />
+              <div key={`empty-header-${i}`} className="border-r h-10" />
             ))}
 
             {/* Hour columns with proper snap alignment */}
@@ -248,10 +240,23 @@ export default function CarScheduleTimeline({
             ))}
           </div>
 
+          {/* Sticky Resource Header - positioned absolutely to overlay */}
+          <div
+            className="absolute left-0 px-3 py-2 font-medium border-r bg-background z-40 h-10 flex items-center text-sm"
+            style={{
+              width: `${(resourceColumnMultiplier / totalColumns) * 100}%`,
+              top: "0px",
+              position: "sticky",
+              left: "0px",
+            }}
+          >
+            Resource
+          </div>
+
           {data.map((car) => (
             <div
               key={car.carId}
-              className="min-w-[1200px] grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
+              className="grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
               style={{
                 gridTemplateColumns: `repeat(${totalColumns}, 1fr)`,
               }}
@@ -269,6 +274,18 @@ export default function CarScheduleTimeline({
                   style={{ scrollSnapAlign: "start" }}
                 />
               ))}
+
+              {/* Sticky Resource Name - positioned absolutely to overlay */}
+              <div
+                className="absolute left-0 top-0 px-3 py-2 font-medium border-r bg-background flex items-center h-12 text-sm z-30"
+                style={{
+                  width: `${(resourceColumnMultiplier / totalColumns) * 100}%`,
+                  position: "sticky",
+                  left: "0px",
+                }}
+              >
+                {car.name}
+              </div>
 
               {/* Booking overlays */}
               {car.bookings.map((bk, idx) => {
@@ -306,30 +323,6 @@ export default function CarScheduleTimeline({
                   </div>
                 );
               })}
-            </div>
-          ))}
-        </div>
-
-        {/* Sticky Resource Column Overlay */}
-        <div
-          className="absolute top-0 left-0 pointer-events-none"
-          style={{
-            width: `calc(1200px / ${totalColumns} * ${resourceColumnMultiplier})`,
-            height: "100%",
-          }}
-        >
-          {/* Sticky Resource Header */}
-          <div className="sticky top-0 left-0 px-3 py-2 font-medium border-r bg-background z-40 h-10 flex items-center text-sm pointer-events-auto">
-            Resource
-          </div>
-
-          {/* Sticky Resource Names */}
-          {data.map((car, index) => (
-            <div
-              key={car.carId}
-              className="sticky left-0 px-3 py-2 font-medium border-r bg-background flex items-center h-12 text-sm z-30 border-b hover:bg-default-50 transition-colors pointer-events-auto"
-            >
-              {car.name}
             </div>
           ))}
         </div>
