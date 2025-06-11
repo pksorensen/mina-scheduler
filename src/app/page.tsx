@@ -75,11 +75,11 @@ git clone https://github.com/Mina-Massoud/mina-scheduler
         xmlns="http://www.w3.org/2000/svg"
       >
         {" "}
-        <g clip-path="url(#clip0_104_26)">
+        <g clipPath="url(#clip0_104_26)">
           {" "}
           <path
-            fill-rule="evenodd"
-            clip-rule="evenodd"
+            fillRule="evenodd"
+            clipRule="evenodd"
             d="M107.143 0H92.8571V82.7556L34.3401 24.2385L24.2386 34.3401L82.7556 92.8571H0V107.143H82.7555L24.2386 165.66L34.3401 175.761L92.8571 117.244V200H107.143V117.244L165.66 175.761L175.761 165.66L117.244 107.143H200V92.8571H117.244L175.761 34.34L165.66 24.2385L107.143 82.7555V0Z"
             fill="url(#paint0_linear_104_26)"
           />{" "}
@@ -95,8 +95,7 @@ git clone https://github.com/Mina-Massoud/mina-scheduler
             gradientUnits="userSpaceOnUse"
           >
             {" "}
-            <stop stop-color="#ACAAFF" />{" "}
-            <stop offset="1" stop-color="#C0E8FF" />{" "}
+            <stop stopColor="#ACAAFF" /> <stop offset="1" stopColor="#C0E8FF" />{" "}
           </linearGradient>{" "}
           <clipPath id="clip0_104_26">
             {" "}
