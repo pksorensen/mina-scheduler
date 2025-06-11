@@ -37,18 +37,48 @@ export default function CarScheduleTimeline({
   const [resourceColumnMultiplier, setResourceColumnMultiplier] = useState(2);
   const [zoom, setZoom] = useState(1);
 
-  // Total columns = resource columns + 24 time columns
-  const totalColumns = resourceColumnMultiplier + 24;
-
   const [interval, setInterval] = useState<
     "hour" | "half-hour" | "quarter-hour"
   >("hour"); // Define the interval for time slots
-  // For simplicity, we assume 1 hour intervals here
 
-  // Show all 24 hours but allow horizontal scrolling
-  const hours = Array.from({ length: 24 }, (_, i) => i);
+  // Calculate number of time slots based on interval
+  const getTimeSlotCount = () => {
+    switch (interval) {
+      case "quarter-hour":
+        return 24 * 4; // 15-minute intervals
+      case "half-hour":
+        return 24 * 2; // 30-minute intervals
+      case "hour":
+      default:
+        return 24; // 60-minute intervals
+    }
+  };
 
-  const formatTime = (h: number) => `${h.toString().padStart(2, "0")}:00`;
+  const timeSlotCount = getTimeSlotCount();
+  
+  // Total columns = resource columns + time columns
+  const totalColumns = resourceColumnMultiplier + timeSlotCount;
+
+  // Generate time slots based on interval
+  const getTimeSlots = () => {
+    const slots = [];
+    const minutesPerSlot = interval === "quarter-hour" ? 15 : interval === "half-hour" ? 30 : 60;
+    const slotsPerHour = 60 / minutesPerSlot;
+    
+    for (let hour = 0; hour < 24; hour++) {
+      for (let slot = 0; slot < slotsPerHour; slot++) {
+        const minutes = slot * minutesPerSlot;
+        slots.push({ hour, minutes, totalMinutes: hour * 60 + minutes });
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = getTimeSlots();
+
+  const formatTime = (hour: number, minutes: number = 0) => {
+    return `${hour.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
+  };
 
   const getOffsetPercent = (date: Date) => {
     const minutes = date.getHours() * 60 + date.getMinutes();
@@ -93,28 +123,31 @@ export default function CarScheduleTimeline({
     // Update width on window resize
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [resourceColumnMultiplier, totalColumns, zoom]);
+  }, [resourceColumnMultiplier, totalColumns, zoom, interval]);
 
-  // Function to scroll to a specific hour
-  const scrollToHour = (hour: number) => {
+  // Function to scroll to a specific time slot
+  const scrollToTimeSlot = (targetHour: number, targetMinutes: number = 0) => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const totalContentWidth = container.scrollWidth;
       const columnWidth = totalContentWidth / totalColumns;
 
-      // Hour columns start after resource columns
-      const hourColumnIndex = hour;
-      const scrollPosition = hourColumnIndex * columnWidth;
+      // Find the time slot index
+      const targetTotalMinutes = targetHour * 60 + targetMinutes;
+      const minutesPerSlot = interval === "quarter-hour" ? 15 : interval === "half-hour" ? 30 : 60;
+      const timeSlotIndex = Math.floor(targetTotalMinutes / minutesPerSlot);
+      
+      const scrollPosition = timeSlotIndex * columnWidth;
 
-      console.log("=== SCROLL TO HOUR DEBUG ===");
-      console.log("target hour:", hour);
+      console.log("=== SCROLL TO TIME SLOT DEBUG ===");
+      console.log("target time:", `${targetHour}:${targetMinutes.toString().padStart(2, "0")}`);
       console.log("totalContentWidth:", totalContentWidth);
       console.log("totalColumns:", totalColumns);
       console.log("columnWidth:", columnWidth);
       console.log("resourceColumnMultiplier:", resourceColumnMultiplier);
-      console.log("hourColumnIndex:", hourColumnIndex);
+      console.log("timeSlotIndex:", timeSlotIndex);
       console.log("calculated scrollPosition:", scrollPosition);
-      console.log("============================");
+      console.log("==================================");
 
       isScrollingRef.current = true;
       container.scrollTo({
@@ -129,6 +162,9 @@ export default function CarScheduleTimeline({
     }
   };
 
+  // Convenience function for backward compatibility
+  const scrollToHour = (hour: number) => scrollToTimeSlot(hour, 0);
+
   // Auto-scroll to 8:00 AM on component mount
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -139,39 +175,41 @@ export default function CarScheduleTimeline({
   }, []);
 
   // Navigation functions
-  const scrollToPreviousHour = () => {
+  const scrollToPreviousTimeSlot = () => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const currentScroll = container.scrollLeft;
       const totalContentWidth = container.scrollWidth;
       const columnWidth = totalContentWidth / totalColumns;
 
-      // Find current hour based on scroll position
+      // Find current time slot based on scroll position
       const currentColumnIndex = Math.round(currentScroll / columnWidth);
-      const currentHour = Math.max(
-        0,
-        currentColumnIndex - resourceColumnMultiplier
-      );
-      const prevHour = Math.max(0, currentHour - 1);
-      scrollToHour(prevHour);
+      const currentTimeSlotIndex = Math.max(0, currentColumnIndex - resourceColumnMultiplier);
+      const prevTimeSlotIndex = Math.max(0, currentTimeSlotIndex - 1);
+      
+      if (prevTimeSlotIndex < timeSlots.length) {
+        const prevSlot = timeSlots[prevTimeSlotIndex];
+        scrollToTimeSlot(prevSlot.hour, prevSlot.minutes);
+      }
     }
   };
 
-  const scrollToNextHour = () => {
+  const scrollToNextTimeSlot = () => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const currentScroll = container.scrollLeft;
       const totalContentWidth = container.scrollWidth;
       const columnWidth = totalContentWidth / totalColumns;
 
-      // Find current hour based on scroll position
+      // Find current time slot based on scroll position
       const currentColumnIndex = Math.round(currentScroll / columnWidth);
-      const currentHour = Math.max(
-        0,
-        currentColumnIndex - resourceColumnMultiplier
-      );
-      const nextHour = Math.min(23, currentHour + 1);
-      scrollToHour(nextHour);
+      const currentTimeSlotIndex = Math.max(0, currentColumnIndex - resourceColumnMultiplier);
+      const nextTimeSlotIndex = Math.min(timeSlots.length - 1, currentTimeSlotIndex + 1);
+      
+      if (nextTimeSlotIndex < timeSlots.length) {
+        const nextSlot = timeSlots[nextTimeSlotIndex];
+        scrollToTimeSlot(nextSlot.hour, nextSlot.minutes);
+      }
     }
   };
 
@@ -269,6 +307,37 @@ export default function CarScheduleTimeline({
 
   return (
     <div className="w-full">
+      {/* Time Interval Controls */}
+      <div className="flex items-center justify-between mb-4 px-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Time Interval:</span>
+          <Button
+            variant={interval === "hour" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setInterval("hour")}
+            className="h-8"
+          >
+            1 Hour
+          </Button>
+          <Button
+            variant={interval === "half-hour" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setInterval("half-hour")}
+            className="h-8"
+          >
+            30 Min
+          </Button>
+          <Button
+            variant={interval === "quarter-hour" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setInterval("quarter-hour")}
+            className="h-8"
+          >
+            15 Min
+          </Button>
+        </div>
+      </div>
+
       {/* Resource Column Width Controls */}
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="flex items-center gap-2">
@@ -321,19 +390,19 @@ export default function CarScheduleTimeline({
           <Button
             variant="outline"
             size="sm"
-            onClick={scrollToPreviousHour}
+            onClick={scrollToPreviousTimeSlot}
             className="h-8"
           >
             <ChevronLeft className="h-4 w-4" />
-            Previous Hour
+            Previous {interval === "hour" ? "Hour" : interval === "half-hour" ? "30min" : "15min"}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={scrollToNextHour}
+            onClick={scrollToNextTimeSlot}
             className="h-8"
           >
-            Next Hour
+            Next {interval === "hour" ? "Hour" : interval === "half-hour" ? "30min" : "15min"}
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -345,6 +414,14 @@ export default function CarScheduleTimeline({
             className="h-8"
           >
             Go to 8:00 AM
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => scrollToTimeSlot(12, 0)}
+            className="h-8"
+          >
+            Go to 12:00 PM
           </Button>
           <Button
             variant="outline"
@@ -367,7 +444,7 @@ export default function CarScheduleTimeline({
           <div
             className="grid sticky top-0 z-30 bg-background border-b"
             style={{
-              gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(24, minmax(${minColumnWidth}px, 1fr))`,
+              gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(${timeSlotCount}, minmax(${minColumnWidth}px, 1fr))`,
               minWidth: `calc(max(${100 * zoom}%, ${
                 minColumnWidth * totalColumns
               }px))`,
@@ -382,14 +459,14 @@ export default function CarScheduleTimeline({
               />
             ))}
 
-            {/* Hour columns with proper snap alignment */}
-            {hours.map((h) => (
+            {/* Time slot columns with proper snap alignment */}
+            {timeSlots.map((slot, index) => (
               <div
-                key={h}
+                key={index}
                 className="text-center border-r px-1 py-2 h-10 flex items-center justify-center text-xs"
                 style={{ scrollSnapAlign: "start" }}
               >
-                {formatTime(h)}
+                {formatTime(slot.hour, slot.minutes)}
               </div>
             ))}
           </div>
@@ -399,7 +476,7 @@ export default function CarScheduleTimeline({
               key={car.carId}
               className="grid border-b h-12 text-sm hover:bg-default-50 transition-colors relative"
               style={{
-                gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(24, minmax(${minColumnWidth}px, 1fr))`,
+                gridTemplateColumns: `repeat(${resourceColumnMultiplier}, minmax(${minColumnWidth}px, 1fr)) repeat(${timeSlotCount}, minmax(${minColumnWidth}px, 1fr))`,
                 minWidth: `calc(max(${100 * zoom}%, ${
                   minColumnWidth * totalColumns
                 }px))`,
@@ -410,10 +487,10 @@ export default function CarScheduleTimeline({
                 <div key={`empty-row-${i}`} className="border-r h-12" />
               ))}
 
-              {/* Hour columns with proper snap alignment */}
-              {hours.map((h) => (
+              {/* Time slot columns with proper snap alignment */}
+              {timeSlots.map((slot, index) => (
                 <div
-                  key={h}
+                  key={index}
                   className="border-r h-12 relative"
                   style={{ scrollSnapAlign: "start" }}
                 />
@@ -430,7 +507,7 @@ export default function CarScheduleTimeline({
                 // Calculate left position accounting for resource columns
                 const resourceColumnWidthPercent =
                   (resourceColumnMultiplier / totalColumns) * 100;
-                const timelineWidthPercent = (24 / totalColumns) * 100;
+                const timelineWidthPercent = (timeSlotCount / totalColumns) * 100;
                 const leftPositionPercent =
                   resourceColumnWidthPercent +
                   (left * timelineWidthPercent) / 100;
